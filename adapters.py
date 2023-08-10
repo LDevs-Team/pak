@@ -1,7 +1,7 @@
 import os, platform
 
 def adapter_ps1(filePath: str, needsReboot:bool):
-    proc = os.system(f"powershell -C {filePath}")
+    proc = os.system(f"powershell -ExecutionPolicy Bypass -C {filePath}")
     if needsReboot:
         match platform.system():
             case 'Linux':
