@@ -54,7 +54,8 @@ def executeManifestKey(key: dict, operationType:str):
         req = requests.get(key['file'].removeprefix('url:'))
         f = open("Temp/" + os.path.basename(urlparse(key["file"]).path), 'wb')
         f.write(req.content)
-        fileToExecute = os.path.basename(urlparse(key["file"]).path)
+        f.close()
+        fileToExecute = "Temp/" + os.path.basename(urlparse(key["file"]).path)
     if not os.path.exists(fileToExecute):
         return classes.MissingFileError(fileToExecute)
     match key['adapter']:
@@ -137,7 +138,7 @@ def upgrade(package: str):
         if packageFile.endswith("zip"):
             manifest = unpack(packageFile)
         elif packageFile.endswith('json'):
-            manifest = json.loads(packageFile)
+            manifest = json.load(open(packageFile, "r"))
     
     if len(queryDatabase(manifest['name'])) == 0:
         print("Package is not installed.")
