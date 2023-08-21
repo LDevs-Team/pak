@@ -6,6 +6,7 @@ import shutil
 import adapters
 import sqlite3
 import requests
+import validators
 import platform
 import typing
 from urllib.parse import urlparse
@@ -36,14 +37,14 @@ def unpack(filePath: str) -> dict|classes.BadPackage:
         raise classes.BadPackage("Package has no manifest.json file")
 
 
-def webDownloadPackage(package_name:str, extension:typing.Literal['zip', 'json']) -> str:
+def webDownload(url:str, filename:str) -> str:
     init_temp()
-    with requests.get(f"{BASE_URL}{package_name}.{extension}") as r:
+    with requests.get(url) as r:
         if r.status_code != 200:
             raise ValueError('The specified package does not exist')
-        with open(f"Temp/{package_name}.{extension}", "wb") as f:
+        with open(f"Temp/{filename}", "wb") as f:
             f.write(r.content)
-    return f"Temp/{package_name}.{extension}"
+    return f"Temp/{filename}"
 
 
     
@@ -73,9 +74,9 @@ def executeManifestKey(key: dict, operationType:str):
 
 def downloadPackageFromRepo(package):
     try:
-        return webDownloadPackage(package, 'zip')
+        return webDownload(f"{BASE_URL}{package}.zip", "{package}.zip")
     except ValueError:
-        return webDownloadPackage(package, 'json')
+        return webDownload(f"{BASE_URL}{package}.zip", "{package}.zip")
     except:
         return ValueError('The specified package does not exist')
     
@@ -87,6 +88,13 @@ def install(package: str):
             manifest = unpack(package)
         else:
             raise ValueError('Specified file is not a package')
+    elif validators.url(package):
+        print(urlparse(package).path.split("/")[-1])
+        packageFile = webDownload(package, urlparse(package).path.split("/")[-1])
+        if packageFile.endswith("zip"):
+            manifest = unpack(packageFile)
+        elif packageFile.endswith('json'):
+            manifest = json.load(open(packageFile, "r"))
     else:
         packageFile = downloadPackageFromRepo(package)
         if packageFile.endswith("zip"):
