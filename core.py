@@ -20,8 +20,26 @@ def init_temp():
         shutil.rmtree('Temp')
     os.mkdir("Temp")
 
+def init_pkgs():
+    manifests_path = ''
+    match platform.system():
+        case 'Windows':
+            backslash = '\\'
+            manifests_path = f"{os.getenv('APPDATA').replace(backslash, '/')}/LDevs/Pak/packages"
+        case 'Linux':
+            manifests_path = f"{os.getenv('HOME')}/.config/LDevs/Pak/packages"
+        case 'Darwin':
+            manifests_path = f"{os.getenv('HOME')}/.config/LDevs/Pak/packages"
+        case _:
+            manifests_path = "/"
+    
+    if os.path.exists(manifests_path) and not os.path.isdir(manifests_path):
+        os.remove(manifests_path)
+    if not os.path.exists(manifests_path):
+        Path.mkdir(manifests_path, exist_ok=True, parents=True)
+    return manifests_path
 def unpack(filePath: str) -> dict|classes.BadPackage:
-    init_temp()
+    """returns the manifest from a zip file"""
     try:
         with zipfile.ZipFile(filePath) as zip:
             zip.extractall('Temp')
@@ -44,9 +62,8 @@ def webDownload(url:str, filename:str) -> str:
             raise ValueError('The specified package does not exist')
         with open(f"Temp/{filename}", "wb") as f:
             f.write(r.content)
+            f.close()
     return f"Temp/{filename}"
-
-
     
 def executeManifestKey(key: dict, operationType:str):
     init_temp()
@@ -74,23 +91,26 @@ def executeManifestKey(key: dict, operationType:str):
 
 def downloadPackageFromRepo(package):
     try:
-        return webDownload(f"{BASE_URL}{package}.zip", "{package}.zip")
+        return webDownload(f"{BASE_URL}{package}.zip", f"{package}.zip")
     except ValueError:
-        return webDownload(f"{BASE_URL}{package}.zip", "{package}.zip")
+        return webDownload(f"{BASE_URL}{package}.json", f"{package}.json")
     except:
         return ValueError('The specified package does not exist')
     
 
 def install(package: str):
+    manifests_path = init_pkgs()
     if os.path.exists(package):
         if os.path.isfile(package):
             package = os.path.abspath(package)
             manifest = unpack(package)
+            shutil.copy(package, manifests_path)
+            packageFile = package
         else:
             raise ValueError('Specified file is not a package')
     elif validators.url(package):
-        print(urlparse(package).path.split("/")[-1])
         packageFile = webDownload(package, urlparse(package).path.split("/")[-1])
+        shutil.copy(packageFile, manifests_path)
         if packageFile.endswith("zip"):
             manifest = unpack(packageFile)
         elif packageFile.endswith('json'):
@@ -101,34 +121,30 @@ def install(package: str):
             manifest = unpack(packageFile)
         elif packageFile.endswith('json'):
             manifest = json.load(open(packageFile, "r"))
-    
+        os.chdir("..")
+        shutil.copy(packageFile, manifests_path)
+        os.chdir("Temp")
+        
     if len(queryDatabase(manifest['name'])) > 0:
         print("Package is already installed.")
         return
-    
     print(f"Starting installation of {manifest['name']}")
     install_key = manifest['installation']
     executeManifestKey(install_key, "install")
-    updatePackagesDatabase(manifest['name'], package)
+    updatePackagesDatabase(manifest['name'], package, manifests_path+"/"+os.path.basename(os.path.realpath(packageFile)))
 
 def uninstall(package: str):
-    if os.path.exists(package):
-        if os.path.isfile(package):
-            package = os.path.abspath(package)
-            manifest = unpack(package)
-        else:
-            raise ValueError('Specified file is not a package')
-    else:
-        packageFile = downloadPackageFromRepo(package)
-        if packageFile.endswith("zip"):
-            manifest = unpack(packageFile)
-        elif packageFile.endswith('json'):
-            manifest = json.load(open(packageFile, "r"))
-    
-    if len(queryDatabase(manifest['name'])) == 0:
-        print("Package is not installed.")
-        return
-    
+    db, cursor = initDatabase()
+    result = queryDatabase(package)
+    if len(result) < 1:
+        raise ValueError("Package is not installed")
+    package = result[0]
+    if package[2].endswith("zip"):
+        manifest = unpack(package[2])   
+    elif package[2].endswith("json"):
+        f = open(package[2], "r")
+        manifest = json.load(f) 
+        f.close()    
     print(f"Starting uninstallation of {manifest['name']}")
     uninstall_key = manifest['uninstallation']
     executeManifestKey(uninstall_key, "uninstall")

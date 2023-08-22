@@ -25,18 +25,18 @@ def initDatabase() -> tuple[sqlite3.Connection, sqlite3.Cursor]:
         f.close()
     db = sqlite3.connect(f"{db_path}/packages.db")
     cursor = db.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS PACKAGES (NAME TEXT, INSTALLPATH TEXT)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS PACKAGES (NAME TEXT, INSTALLPATH TEXT, MANIFESTPATH TEXT)")
     db.commit()
     return db, cursor
     
-def queryDatabase(packageName:str) -> list[tuple[str, str]] | None:
-    db, cursor = initDatabase()
+def queryDatabase(packageName:str) -> list[tuple[str, str, str]] | None:
+    _, cursor = initDatabase()
     cursor.execute("SELECT * FROM PACKAGES WHERE NAME = ?", (packageName,))
     return cursor.fetchall()
 
-def updatePackagesDatabase(packageName:str, installPath:str) -> None:
+def updatePackagesDatabase(packageName:str, installPath:str, manifestBackupPath:str) -> None:
     db, cursor = initDatabase()
-    cursor.execute("INSERT INTO PACKAGES (NAME, INSTALLPATH) VALUES (?, ?)", (packageName, installPath))
+    cursor.execute("INSERT INTO PACKAGES (NAME, INSTALLPATH, MANIFESTPATH) VALUES (?, ?, ?)", (packageName, installPath, manifestBackupPath))
     db.commit()
     
 def removeFromPackagesDatabase(packageName:str) -> None:
