@@ -1,19 +1,21 @@
 from typing import Dict, Union
-from classes import BadPackage
+from . import classes
 import os
 import zipfile
 import json
-import classes
 import shutil
-import adapters
-import sqlite3
+from . import adapters
 import requests
 import validators
 import platform
 import typing
 from urllib.parse import urlparse
 from pathlib import Path
-from database import queryDatabase, updatePackagesDatabase, removeFromPackagesDatabase
+from . import database 
+
+BadPackage = classes.BadPackage
+
+queryDatabase, updatePackagesDatabase, removeFromPackagesDatabase = database.queryDatabase, database.updatePackagesDatabase, database.removeFromPackagesDatabase
 
 BASE_URL = "https://github.com/LDevs-Team/pak-pkgs/raw/main/"
 
