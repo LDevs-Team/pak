@@ -197,18 +197,19 @@ def install(package: str):
         elif packageFile.endswith('json'):
             manifest = json.load(open(packageFile, "r"))
     else:
+        print(os.path.abspath("."))
         packageFile = downloadPackageFromRepo(package)
+        print(packageFile)
         if packageFile.endswith("zip"):
             manifest = unpack(packageFile)
+            os.chdir("..")
         elif packageFile.endswith('json'):
             manifest = json.load(open(packageFile, "r"))
-        os.chdir("..")
         shutil.copy(packageFile, manifests_path)
-        os.chdir("Temp")
         
     if len(queryDatabase(manifest['name'])) > 0:
         print("Package is already installed.")
-        return
+        raise ValueError("Package is already installed")
     print(f"Starting installation of {manifest['name']}")
     install_key = manifest['installation']
     executeManifestKey(install_key, "install")
